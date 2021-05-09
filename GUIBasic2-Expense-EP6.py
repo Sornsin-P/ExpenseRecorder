@@ -138,7 +138,7 @@ v_price = StringVar()
 # StringVar() คือ ตัวแปรพิเศษสำหรับเก็บข้อมูลใน GUI
 E2 = ttk.Entry(F1,textvariable=v_price,font=FONT1)
 E2.pack()
-#-------------------
+#--------------------
 
 #------text3--------
 L = ttk.Label(F1,text='จำนวน (ชิ้น)',font=FONT1).pack()
@@ -179,8 +179,8 @@ def update_record():
 
 v_allrecord = StringVar()
 v_allrecord.set('---------All Record-------')
-Allrecord = ttk.Label(T2,textvariable=v_allrecord,font=(FONT2,14),foreground='green')
-Allrecord.pack()
+#Allrecord = ttk.Label(T2,textvariable=v_allrecord,font=(FONT2,14),foreground='green')
+#Allrecord.pack()
 
 #TREEVIEW
 L = ttk.Label(T2,text='ตารางแสดงรายการทั้งหมด',font=FONT1).pack()
