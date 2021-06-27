@@ -4,12 +4,70 @@ from tkinter import ttk, messagebox
 import csv
 from datetime import datetime
 # ttk is theme of Tk
+#################################
+####Data Base######
+import sqlite3
+from tkinter.constants import NONE
+
+#Create Data base
+conn = sqlite3.connect('expense.sqlite3')
+#Create ตัวดำเนินการ
+c = conn.cursor()
+#Create Table ด้วย SQL
+'''
+'รหัสรายการ (transaction) TEXT',
+'วัน-เวลา (date time) TEXT',
+'รายการ (title) TEXT',
+'ค่าใช้จ่าย (expense) REAL(float)',
+'จำนวน (quantity) INTEGER ',
+'รวม (total) REAL' #REAL ใน SQL คือ จุดทศนิยม
+'''
+c.execute("""CREATE TABLE IF NOT EXISTS expenselist (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            transactionid TEXT,
+            datetime TEXT,
+            title TEXT,
+            expense REAL,
+            quantity INTEGER,
+            total REAL
+        )""")
+
+def insert_expense(transactionid,datetime,title,expense,quantity,total):
+    ID = None
+    with conn:
+        c.execute("""INSERT INTO expenselist VALUES (?,?,?,?,?,?,?)""",
+            (ID,transactionid,datetime,title,expense,quantity,total))
+    conn.commit()  #การบันทึกข้อมูลลงใน data base หรือคำสั่ง save
+    #print('Insert Success')
+
+def show_expense():
+    with conn:
+        c.execute("SELECT * FROM expenselist")
+        expense = c.fetchall() # คำสั่งให้ดึงข้อมูลมาทั้งหมด
+        #print(expense)
+    return expense
+
+def update_expense(transactionid,title,expense,quantity,total):
+    with conn:
+        c.execute("""UPDATE expenselist SET title=?,expense=?,quantity=?,total=? WHERE transactionid=?""",
+        ([title,expense,quantity,total,transactionid]))
+    conn.commit()
+    #print('Data Updated')
+
+def delete_expense(transactionid):
+    with conn:
+        c.execute("DELETE FROM expenselist WHERE transactionid=?",([transactionid]))
+    conn.commit()
+    #print('Data Deleted')
+
+
+####Data Base######
 
 GUI = Tk()
 GUI.title('โปรแกรมบันทึกค่าใช้จ่าย by Uncle Engineer')
 #GUI.geometry('700x700+50+10')
 w = 700
-h = 600
+h = 700
 
 ws = GUI.winfo_screenwidth()
 hs = GUI.winfo_screenheight()
@@ -73,7 +131,7 @@ def Save(event=None):
 	quantity = v_quantity.get()
 
 	if expense == '':
-		print('No Data')
+		#print('No Data')
 		messagebox.showwarning('Error','กรุณากรอกข้อมูลค่าใช้จ่าย')
 		return
 	elif price == '':
@@ -86,8 +144,8 @@ def Save(event=None):
 	try:
 		total = float(price) * float(quantity)
 		# .get() คือดึงค่ามาจาก v_expense = StringVar()
-		print('รายการ: {} ราคา: {}'.format(expense,price))
-		print('จำนวน: {} รวมทั้งหมด: {} บาท'.format(quantity,total))
+		#print('รายการ: {} ราคา: {}'.format(expense,price))
+		#print('จำนวน: {} รวมทั้งหมด: {} บาท'.format(quantity,total))
 		text = 'รายการ: {} ราคา: {}\n'.format(expense,price)
 		text = text + 'จำนวน: {} รวมทั้งหมด: {} บาท'.format(quantity,total)
 		v_result.set(text)
@@ -98,11 +156,15 @@ def Save(event=None):
 
 		# บันทึกข้อมูลลง csv อย่าลืม import csv ด้วย
 		today = datetime.now().strftime('%a') # days['Mon'] = 'จันทร์'
-		print(today)
+		#print(today)
 		stamp = datetime.now()
 		dt = stamp.strftime('%Y-%m-%d %H:%M:%S')
-		transactionid = stamp.strftime('%Y%m%d%H%M%f')
+		transactionid = stamp.strftime('%Y%m%d%H%M')
 		dt = days[today] + '-' + dt
+
+		insert_expense(transactionid,dt,expense,float(price),int(quantity),total)
+
+
 		with open('savedata.csv','a',encoding='utf-8',newline='') as f:
 			# with คือสั่งเปิดไฟล์แล้วปิดอัตโนมัติ
 			# 'a' การบันทึกเรื่อยๆ เพิ่มข้อมูลต่อจากข้อมูลเก่า
@@ -160,10 +222,10 @@ E3 = ttk.Entry(F1,textvariable=v_quantity,font=FONT1)
 E3.pack()
 #-------------------
 
-icon_b1 = PhotoImage(file='save.png').subsample(5)
+icon_b1 = PhotoImage(file='save.png').subsample(20)
 
 B2 = ttk.Button(F1,text=f'{"Save": >{10}}',image=icon_b1,compound='left',command=Save)
-B2.pack(ipadx=50,ipady=20,pady=20)
+B2.pack(ipadx=20,ipady=10,pady=20)
 
 v_result = StringVar()
 v_result.set('--------ผลลัพธ์--------')
@@ -203,7 +265,7 @@ resulttable.pack()
 for hd in header:
 	resulttable.heading(hd,text=hd)
 
-headerwidth = [120,150,170,80,80,80]
+headerwidth = [130,150,170,80,80,80]
 for hd,W in zip(header,headerwidth):
 	resulttable.column(hd,width=W)
 
@@ -214,16 +276,22 @@ def UpdateCSV():
 		data = list(alltransaction.values())
 		fw.writerows(data)
 		print('Table was updated')
+
+def UpdateSQL():
+	data = list(alltransaction.values())
+	for d in data:
+		update_expense(d[0],d[2],d[3],d[4],d[5])
+		
 		
 def DeleteRecord(event=None):
 	check = messagebox.askyesno('Confirm?','คุณต้องการลบข้อมูลใช่หรือไม่?')
-	print('YES/NO:',check)
+	#print('YES/NO:',check)
 
 	if check == True:
 
-		print('delete')
+		#print('delete')
 		select = resulttable.selection()
-		print(select)
+		#print(select)
 		data = resulttable.item(select)
 		data = data['values']
 		transactionid = data[0]
@@ -231,7 +299,8 @@ def DeleteRecord(event=None):
 		#print(type(transactionid))
 		del alltransaction[str(transactionid)]  # Delete date in dict
 		#print(alltransaction)
-		UpdateCSV()
+		#UpdateCSV()
+		delete_expense(str(transactionid))  #delete DB
 		update_table()
 	else:
 		print('Cancle')
@@ -244,13 +313,14 @@ resulttable.bind('<Delete>',DeleteRecord)
 def update_table():
 	resulttable.delete(*resulttable.get_children())
 	try:
-		getdata = read_csv()
+		getdata = show_expense() #read_csv()
 		for dt in getdata:
-			alltransaction[dt[0]] = dt #dt[0] = transectionid
-			resulttable.insert('',0,value=dt)
-		print(alltransaction)
+			alltransaction[dt[1]] = dt[1:] #dt[0] = transectionid
+			resulttable.insert('',0,value=dt[1:])
+		#print(alltransaction)
 	except  Exception as e:
 		print('No File')
+		
 
 ####Right Click Menu#####
 def EditRecord():
@@ -295,14 +365,15 @@ def EditRecord():
 		#print(transactionid)
 		#print(alltransaction)
 		olddata = alltransaction[str(transactionid)]
-		print('OLD',olddata)
+		#print('OLD',olddata)
 		v1 = v_expense.get()
 		v2 = float(v_price.get())
 		v3 = float(v_quantity.get())
 		total = v2 * v3
 		newdata = [olddata[0],olddata[1],v1,v2,v3,total]
 		alltransaction[str(transactionid)] = newdata
-		UpdateCSV()
+		#UpdateCSV()
+		UpdateSQL()
 		update_table()
 		POPUP.destroy() #สั่งปิด popup หลังจากแก้ค่าเสร็จ
 	
@@ -313,7 +384,7 @@ def EditRecord():
 	B2.pack(ipadx=50,ipady=20,pady=20)
 
 	select = resulttable.selection()
-	print(select)
+	#print(select)
 	data = resulttable.item(select)
 	data = data['values']
 	transactionid = data[0]
@@ -337,11 +408,6 @@ def menupopup(event):
 	rightclick.post(event.x_root,event.y_root)
 
 resulttable.bind('<Button-3>',menupopup)
-
-
-
-
-
 
 
 update_table()
